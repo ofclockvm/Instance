@@ -1,5 +1,5 @@
 name: Secure RDP via Tailscale (Automated Loop)
-https://cloudfirepro.com/en/EQN9mE8yG6dW/file
+
 on:
   workflow_dispatch:
     inputs:
