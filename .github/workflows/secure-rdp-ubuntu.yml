@@ -1,144 +1,40 @@
-name: Secure RDP Ubuntu via Tailscale (Automated Loop)
-
+name: Ubuntu Desktop RDP via Tailscale
 on:
   workflow_dispatch:
-    inputs:
-      gh_api_token:
-        description: "🔒 ToolboxLap | ENTER YOUR GITHUB PAT HERE (Starts with ghp_...)"
-        required: true
-        default: ""
-      loops:
-        description: "🔄 System Internal Counter (Leave Empty - Managed Automatically)"
-        required: false
-        default: ""
-
-concurrency:
-  group: rdp-loop-singleton-ubuntu
-  cancel-in-progress: false
-
-permissions:
-  contents: read
-  actions: write
 
 jobs:
-  secure-rdp-ubuntu:
-    runs-on: ubuntu-24.04
+  ubuntu-rdp:
+    runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
-      - name: 🔒 Executing Secured Core Engine (Ubuntu)
+      - name: Set up Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
+          args: --hostname=gh-runner-ubuntu-${{ github.run_number }} --accept-routes
+
+      - name: Install Ubuntu Desktop and xrdp
         run: |
-          # 📢 Protected Branding & Dynamic Injector
-          u_enc="VE9PTEJPWExBUA=="
-          p_enc="YWRtaW5AMTIz"
-          w_enc="aHR0cHM6Ly93d3cudG9vbGJveGxhcC5jb20="
-          y_enc="aHR0cHM6Ly93d3cueW91dHViZS5jb20vQFRPT0xCT1hMQVAtdTFj"
-
-          u=$(echo "$u_enc" | base64 -d)
-          p=$(echo "$p_enc" | base64 -d)
-          w=$(echo "$w_enc" | base64 -d)
-          y=$(echo "$y_enc" | base64 -d)
-
-          # Anti-Tamper Hard Verification
-          if [ "$u" != "TOOLBOXLAP" ] || [[ "$w" != *"toolboxlap"* ]]; then
-              echo "🔒 Security Violation: Unauthorized modification detected!"
-              exit 1
-          fi
-
-          # Validate GH Token
-          token="${{ github.event.inputs.gh_api_token }}"
-          if [[ -z "$token" ]] || [[ ! "$token" =~ ^ghp_[a-zA-Z0-9]+$ ]]; then
-              echo "❌ Invalid Token!"
-              exit 1
-          fi
-
-          # Injecting Clickable Blue Links Into GitHub Summary
-          cat << EOF >> $GITHUB_STEP_SUMMARY
-          # 🚀 TOOLBOXLAP OFFICIAL UBUNTU RDP AUTOMATION
-          ### 🔒 Copyright & Ownership
-          * **Copyright © 2026 ToolboxLap.com**
-          * All rights reserved. Do not remove or modify copyright text.
-          ### 🔗 Official Channels & Support
-          * 🌐 **Official Website:** [$w]($w/)
-          * 📺 **YouTube Channel:** [Subscribe Here]($y)
-          ---
-          EOF
-
-          # ⚙️ Core RDP Configuration
           sudo apt update
-          sudo apt install -y xfce4 xfce4-goodies xrdp xorgxrdp dbus-x11
-          sudo apt clean
-
-          # Create user and set password
-          sudo useradd -m -s /bin/bash "$u" || true
-          echo "$u:$p" | sudo chpasswd
-          sudo usermod -aG sudo,adm "$u"
-          echo "exec startxfce4" | sudo tee /home/$u/.xsession > /dev/null
-          sudo chown $u:$u /home/$u/.xsession
-          sudo adduser $u ssl-cert || true
-
-          # Configure xrdp for XFCE (D-Bus fix)
-          sudo bash -c 'cat > /etc/xrdp/startwm.sh << "EOF"
-          #!/bin/sh
-          unset DBUS_SESSION_BUS_ADDRESS
-          unset XDG_RUNTIME_DIR
-          [ -r /etc/profile ] && . /etc/profile
-          exec dbus-launch --exit-with-session startxfce4
-          EOF'
-          sudo chmod +x /etc/xrdp/startwm.sh
-
-          # Enable and start xrdp
+          sudo apt install -y xfce4 xfce4-goodies xrdp
           sudo systemctl enable xrdp
-          sudo systemctl restart xrdp
+          sudo systemctl start xrdp
+          # تعيين كلمة مرور للمستخدم
+          echo "runner:ubuntu123" | sudo chpasswd
+          # التأكد من أن xrdp يستمع على المنفذ 3389
+          sudo netstat -tlnp | grep 3389
 
-          # 🌐 Silent Tailscale Engine Setup
-          curl -fsSL https://tailscale.com/install.sh | sh
-          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-runner-toolboxlap-${{ github.run_number }} --accept-routes
+      - name: Get Tailscale IP and Show Connection Info
+        run: |
+          TS_IP=$(tailscale ip -4)
+          echo "========================================================"
+          echo "🖥️  Ubuntu RDP Connection Details"
+          echo "========================================================"
+          echo "Address: $TS_IP"
+          echo "Username: runner"
+          echo "Password: ubuntu123"
+          echo "Port: 3389"
+          echo "========================================================"
 
-          tsIP=""
-          r=0
-          while [ -z "$tsIP" ] && [ $r -lt 10 ]; do
-              tsIP=$(tailscale ip -4 2>/dev/null)
-              sleep 5
-              r=$((r+1))
-          done
-
-          if [ -z "$tsIP" ]; then
-              echo "Network Fail"
-              exit 1
-          fi
-
-          # 📢 Printing Credentials and Brand Links
-          echo "Address: $tsIP"
-          echo "Username: $u"
-          echo "Password: $p"
-          echo "Port: 3389 (RDP)"
-          echo "-----------------------------------------------------------------"
-          echo "⚡ Powered by Toolbox Lab"
-          echo "🌐 Official Website: $w"
-          echo "📺 YouTube Channel: $y"
-          echo "================================================================="
-
-          # ⏱️ Protected Runtime Production Loop (5 Hours 40 Minutes)
-          m=340
-          for ((i=1; i<=m; i++)); do
-              l=$((m-i))
-              echo "[$(date)] Running Tracker: $l min remaining."
-              sleep 60
-          done
-
-          # 🔁 Secured Chain Rotation Engine
-          inputLoops="${{ github.event.inputs.loops }}"
-          loops=${inputLoops:-4}
-          if [ "$loops" -eq 1 ]; then
-              echo "🎯 Chain Finished Successfully."
-              exit 0
-          fi
-
-          next=$((loops - 1))
-          echo "✅ Secured handoff executed to loop iteration: $next"
-
-          curl -X POST \
-            -H "Authorization: Bearer $token" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/workflows/secure-rdp-ubuntu.yml/dispatches \
-            -d "{\"ref\":\"${{ github.ref_name }}\",\"inputs\":{\"gh_api_token\":\"$token\",\"loops\":\"$next\"}}"
+      - name: Keep Session Alive
+        run: sleep 21600  # 6 hours
