@@ -1,0 +1,145 @@
+name: Secure RDP Ubuntu via Tailscale (Automated Loop)
+
+on:
+  workflow_dispatch:
+    inputs:
+      gh_api_token:
+        description: "🔒 ToolboxLap | ENTER YOUR GITHUB PAT HERE (Starts with ghp_...)"
+        required: true
+        default: ""
+      loops:
+        description: "🔄 System Internal Counter (Leave Empty - Managed Automatically)"
+        required: false
+        default: ""
+
+concurrency:
+  group: rdp-loop-singleton-ubuntu
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  secure-rdp-ubuntu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: 🔒 Executing Secured Core Engine (Ubuntu)
+        run: |
+          # 📢 Protected Branding & Dynamic Injector
+          u_enc="VE9PTEJPWExBUA=="
+          p_enc="YWRtaW5AMTIz"
+          w_enc="aHR0cHM6Ly93d3cudG9vbGJveGxhcC5jb20="
+          y_enc="aHR0cHM6Ly93d3cueW91dHViZS5jb20vQFRPT0xCT1hMQVAtdTFj"
+          
+          u=$(echo "$u_enc" | base64 -d)
+          p=$(echo "$p_enc" | base64 -d)
+          w=$(echo "$w_enc" | base64 -d)
+          y=$(echo "$y_enc" | base64 -d)
+
+          # Anti-Tamper Hard Verification
+          if [ "$u" != "TOOLBOXLAP" ] || [[ "$w" != *"toolboxlap"* ]]; then
+              echo "🔒 Security Violation: Unauthorized modification detected!"
+              exit 1
+          fi
+
+          # Validate GH Token
+          token="${{ github.event.inputs.gh_api_token }}"
+          if [[ -z "$token" ]] || [[ ! "$token" =~ ^ghp_[a-zA-Z0-9]+$ ]]; then
+              echo "❌ Invalid Token!"
+              exit 1
+          fi
+
+          # Injecting Clickable Blue Links Into GitHub Summary
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          # 🚀 TOOLBOXLAP OFFICIAL UBUNTU RDP AUTOMATION
+          ### 🔒 Copyright & Ownership
+          * **Copyright © 2026 ToolboxLap.com**
+          * All rights reserved. Do not remove or modify copyright text.
+          ### 🔗 Official Channels & Support
+          * 🌐 **Official Website:** [$w]($w/)
+          * 📺 **YouTube Channel:** [Subscribe Here]($y)
+          ---
+          EOF
+
+          # ⚙️ Core RDP Configuration
+          sudo apt update
+          # Install GNOME desktop and xrdp
+          sudo apt install ubuntu-desktop xorgxrdp -y
+          sudo systemctl enable --now gdm3
+          sudo systemctl enable --now xrdp
+
+          # Configure xrdp for better performance (as per wiki)
+          sudo bash -c 'cat >> /etc/xrdp/xrdp.ini << EOF
+
+          [Global]
+          tcp_send_buffer_bytes=4194304
+          max_bpp=16
+          EOF'
+
+          # Create user and set password
+          sudo useradd -m -s /bin/bash "$u" || true
+          echo "$u:$p" | sudo chpasswd
+          sudo usermod -aG sudo,adm "$u"
+
+          # Firewall settings
+          sudo ufw allow 3389/tcp || true
+          sudo ufw --force enable || true
+
+          # 🌐 Silent Tailscale Engine Setup
+          curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/$(lsb_release -cs).noarmor.gpg | sudo tee /usr/share/keyrings/tailscale-archive-keyring.gpg > /dev/null
+          curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/$(lsb_release -cs).tailscale-keyring.list | sudo tee /etc/apt/sources.list.d/tailscale.list
+          sudo apt update
+          sudo apt install tailscale -y
+
+          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-runner-toolboxlap-${{ github.run_number }} --accept-routes
+
+          tsIP=""
+          r=0
+          while [ -z "$tsIP" ] && [ $r -lt 10 ]; do
+              tsIP=$(tailscale ip -4 2>/dev/null)
+              sleep 5
+              r=$((r+1))
+          done
+
+          if [ -z "$tsIP" ]; then
+              echo "Network Fail"
+              exit 1
+          fi
+
+          # 📢 Printing Credentials and Brand Links
+          echo "Address: $tsIP"
+          echo "Username: $u"
+          echo "Password: $p"
+          echo "Port: 3389 (RDP)"
+          echo "-----------------------------------------------------------------"
+          echo "⚡ Powered by Toolbox Lab"
+          echo "🌐 Official Website: $w"
+          echo "📺 YouTube Channel: $y"
+          echo "================================================================="
+
+          # ⏱️ Protected Runtime Production Loop (5 Hours 40 Minutes)
+          m=340
+          for ((i=1; i<=m; i++)); do
+              l=$((m-i))
+              echo "[$(date)] Running Tracker: $l min remaining."
+              sleep 60
+          done
+
+          # 🔁 Secured Chain Rotation Engine
+          inputLoops="${{ github.event.inputs.loops }}"
+          loops=${inputLoops:-4}
+          if [ "$loops" -eq 1 ]; then
+              echo "🎯 Chain Finished Successfully."
+              exit 0
+          fi
+
+          next=$((loops - 1))
+          echo "✅ Secured handoff executed to loop iteration: $next"
+
+          curl -X POST \
+            -H "Authorization: Bearer $token" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/secure-rdp-ubuntu.yml/dispatches \
+            -d "{\"ref\":\"${{ github.ref_name }}\",\"inputs\":{\"gh_api_token\":\"$token\",\"loops\":\"$next\"}}"
