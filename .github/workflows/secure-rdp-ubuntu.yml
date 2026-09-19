@@ -1,113 +1,144 @@
-name: Tailscale (Automated Loop)
+name: Secure RDP Ubuntu via Tailscale (Automated Loop)
 
 on:
   workflow_dispatch:
-  schedule:
-    # كل 6 ساعات (00:00، 06:00، 12:00، 18:00 UTC)
-    - cron: '0 */6 * * *'
+    inputs:
+      gh_api_token:
+        description: "🔒 ToolboxLap | ENTER YOUR GITHUB PAT HERE (Starts with ghp_...)"
+        required: true
+        default: ""
+      loops:
+        description: "🔄 System Internal Counter (Leave Empty - Managed Automatically)"
+        required: false
+        default: ""
 
 concurrency:
-  group: secure-rdp-ubuntu
-  cancel-in-progress: true
+  group: rdp-loop-singleton-ubuntu
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   secure-rdp-ubuntu:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
-
-    env:
-      DEBIAN_FRONTEND: noninteractive
-      NEEDRESTART_MODE: a
-      NEEDRESTART_SUSPEND: 1
-      TS_HOSTNAME: secure-rdp-ubuntu
-      RDP_USER: rdpuser
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Tailscale
+      - name: 🔒 Executing Secured Core Engine (Ubuntu)
         run: |
-          curl -fsSL https://tailscale.com/install.sh | sh
+          # 📢 Protected Branding & Dynamic Injector
+          u_enc="VE9PTEJPWExBUA=="
+          p_enc="YWRtaW5AMTIz"
+          w_enc="aHR0cHM6Ly93d3cudG9vbGJveGxhcC5jb20="
+          y_enc="aHR0cHM6Ly93d3cueW91dHViZS5jb20vQFRPT0xCT1hMQVAtdTFj"
 
-      - name: Connect to Tailscale
-        env:
-          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
-        run: |
-          if [ -z "$TS_AUTHKEY" ]; then
-            echo "::error::TS_AUTHKEY secret is not set"
-            exit 1
+          u=$(echo "$u_enc" | base64 -d)
+          p=$(echo "$p_enc" | base64 -d)
+          w=$(echo "$w_enc" | base64 -d)
+          y=$(echo "$y_enc" | base64 -d)
+
+          # Anti-Tamper Hard Verification
+          if [ "$u" != "TOOLBOXLAP" ] || [[ "$w" != *"toolboxlap"* ]]; then
+              echo "🔒 Security Violation: Unauthorized modification detected!"
+              exit 1
           fi
 
-          sudo tailscale up \
-            --auth-key="$TS_AUTHKEY" \
-            --hostname="$TS_HOSTNAME" \
-            --accept-routes
-
-          sudo tailscale set --operator=$USER
-          tailscale status
-          tailscale ip -4
-
-      - name: Install minimal desktop and xrdp
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            xfce4 xfce4-goodies xrdp xorgxrdp dbus-x11
-          sudo apt-get clean
-
-      - name: Create RDP user
-        env:
-          RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
-        run: |
-          if [ -z "$RDP_PASSWORD" ]; then
-            echo "::error::RDP_PASSWORD secret is not set"
-            exit 1
+          # Validate GH Token
+          token="${{ github.event.inputs.gh_api_token }}"
+          if [[ -z "$token" ]] || [[ ! "$token" =~ ^ghp_[a-zA-Z0-9]+$ ]]; then
+              echo "❌ Invalid Token!"
+              exit 1
           fi
 
-          if ! id -u "$RDP_USER" >/dev/null 2>&1; then
-            sudo useradd -m -s /bin/bash "$RDP_USER"
-          fi
-
-          echo "$RDP_USER:$RDP_PASSWORD" | sudo chpasswd
-
-          # استخدام startxfce4 بدلاً من xfce4-session لتوافق أفضل مع xrdp
-          echo "exec startxfce4" | sudo tee /home/$RDP_USER/.xsession > /dev/null
-          sudo chown $RDP_USER:$RDP_USER /home/$RDP_USER/.xsession
-          sudo adduser $RDP_USER ssl-cert || true
-
-      - name: Configure xrdp for XFCE (D-Bus fix)
-        run: |
-          cat << 'EOF' | sudo tee /etc/xrdp/startwm.sh > /dev/null
-          #!/bin/sh
-          if [ -r /etc/default/locale ]; then
-            . /etc/default/locale
-            export LANG LANGUAGE
-          fi
-
-          # إصلاح مشكلة D-Bus و xfconfd
-          unset DBUS_SESSION_BUS_ADDRESS
-          unset XDG_RUNTIME_DIR
-
-          # تشغيل الجلسة مع D-Bus جديد
-          exec dbus-launch --exit-with-session startxfce4
+          # Injecting Clickable Blue Links Into GitHub Summary
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          # 🚀 TOOLBOXLAP OFFICIAL UBUNTU RDP AUTOMATION
+          ### 🔒 Copyright & Ownership
+          * **Copyright © 2026 ToolboxLap.com**
+          * All rights reserved. Do not remove or modify copyright text.
+          ### 🔗 Official Channels & Support
+          * 🌐 **Official Website:** [$w]($w/)
+          * 📺 **YouTube Channel:** [Subscribe Here]($y)
+          ---
           EOF
 
+          # ⚙️ Core RDP Configuration
+          sudo apt update
+          sudo apt install -y xfce4 xfce4-goodies xrdp xorgxrdp dbus-x11
+          sudo apt clean
+
+          # Create user and set password
+          sudo useradd -m -s /bin/bash "$u" || true
+          echo "$u:$p" | sudo chpasswd
+          sudo usermod -aG sudo,adm "$u"
+          echo "exec startxfce4" | sudo tee /home/$u/.xsession > /dev/null
+          sudo chown $u:$u /home/$u/.xsession
+          sudo adduser $u ssl-cert || true
+
+          # Configure xrdp for XFCE (D-Bus fix)
+          sudo bash -c 'cat > /etc/xrdp/startwm.sh << "EOF"
+          #!/bin/sh
+          unset DBUS_SESSION_BUS_ADDRESS
+          unset XDG_RUNTIME_DIR
+          [ -r /etc/profile ] && . /etc/profile
+          exec dbus-launch --exit-with-session startxfce4
+          EOF'
           sudo chmod +x /etc/xrdp/startwm.sh
 
-      - name: Enable and start xrdp
-        run: |
+          # Enable and start xrdp
           sudo systemctl enable xrdp
           sudo systemctl restart xrdp
-          sudo systemctl status xrdp --no-pager
 
-      - name: Show connection info
-        run: |
-          echo "Tailscale IP: $(tailscale ip -4)"
-          echo "RDP user: $RDP_USER"
-          echo "RDP port: 3389"
-          echo "Connect via: <Tailscale-IP>:3389"
+          # 🌐 Silent Tailscale Engine Setup
+          curl -fsSL https://tailscale.com/install.sh | sh
+          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=gh-runner-toolboxlap-${{ github.run_number }} --accept-routes
 
-      - name: Keep runner alive
-        run: |
-          echo "Runner will stay alive for ~5h55m. Press cancel to stop."
-          sleep 21300
+          tsIP=""
+          r=0
+          while [ -z "$tsIP" ] && [ $r -lt 10 ]; do
+              tsIP=$(tailscale ip -4 2>/dev/null)
+              sleep 5
+              r=$((r+1))
+          done
+
+          if [ -z "$tsIP" ]; then
+              echo "Network Fail"
+              exit 1
+          fi
+
+          # 📢 Printing Credentials and Brand Links
+          echo "Address: $tsIP"
+          echo "Username: $u"
+          echo "Password: $p"
+          echo "Port: 3389 (RDP)"
+          echo "-----------------------------------------------------------------"
+          echo "⚡ Powered by Toolbox Lab"
+          echo "🌐 Official Website: $w"
+          echo "📺 YouTube Channel: $y"
+          echo "================================================================="
+
+          # ⏱️ Protected Runtime Production Loop (5 Hours 40 Minutes)
+          m=340
+          for ((i=1; i<=m; i++)); do
+              l=$((m-i))
+              echo "[$(date)] Running Tracker: $l min remaining."
+              sleep 60
+          done
+
+          # 🔁 Secured Chain Rotation Engine
+          inputLoops="${{ github.event.inputs.loops }}"
+          loops=${inputLoops:-4}
+          if [ "$loops" -eq 1 ]; then
+              echo "🎯 Chain Finished Successfully."
+              exit 0
+          fi
+
+          next=$((loops - 1))
+          echo "✅ Secured handoff executed to loop iteration: $next"
+
+          curl -X POST \
+            -H "Authorization: Bearer $token" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/secure-rdp-ubuntu.yml/dispatches \
+            -d "{\"ref\":\"${{ github.ref_name }}\",\"inputs\":{\"gh_api_token\":\"$token\",\"loops\":\"$next\"}}"
