@@ -42,8 +42,7 @@ jobs:
           sudo tailscale up \
             --auth-key="$TS_AUTHKEY" \
             --hostname="$TS_HOSTNAME" \
-            --accept-routes \
-            --ephemeral
+            --accept-routes
 
           sudo tailscale set --operator=$USER
           tailscale status
